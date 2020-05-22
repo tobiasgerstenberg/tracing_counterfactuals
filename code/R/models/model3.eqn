@@ -1,0 +1,4 @@
+3
+1 TestAcc s
+1 TestErr (1-s)*g
+1 TestAcc (1-s)*(1-g)

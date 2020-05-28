@@ -1,6 +1,6 @@
 # The trajectory of counterfactual simulation in development
 
-This repository contains all materials for the paper "The trajectory of counterfactual simulation in development" by Jonathan F. Kominsky, Tobias Gerstenberg, Madeline Pelz, Mark Sheksin, Henrik Singmann, Laura Schulz & Frank C. Keil.
+This repository contains all materials for the paper "The trajectory of counterfactual simulation in development". 
 
 ## project structure 
 

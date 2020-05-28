@@ -1,6 +1,5 @@
 ---
 title: "Tracing counterfactual development"
-author: "Jonathan Kominsky, Tobias Gerstenberg & Henrik Singmann"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
   bookdown::html_document2:
@@ -962,7 +961,7 @@ ggplot(samps,
   theme(panel.grid.minor.x = element_line(),
         panel.grid.major.y = element_line())
 
-ggsave("../figures//experiment3_estimate.pdf",
+ggsave("../figures/experiment3_estimate.pdf",
        width = 4,
        height = 4)
 ```

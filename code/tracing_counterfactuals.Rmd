@@ -530,7 +530,8 @@ We can also plot the difference distributions plus 80% and 95% credibility inter
 ```{r, fig.height=3, fig.width=5}
 tmp_diff %>%   
   ggplot(aes(y = diff, x = estimate)) +
-  stat_halfeye(.width = c(0.80, 0.95), point_interval = mode_hdci) +
+  stat_halfeye(.width = c(0.80, 0.95), point_interval = mode_hdci, 
+               normalize = "groups") +
   geom_vline(xintercept = 0, linetype = "dashed") +
   facet_wrap(~parameter, labeller = label_parsed) +
   xlab("Difference (Probability Scale)") +

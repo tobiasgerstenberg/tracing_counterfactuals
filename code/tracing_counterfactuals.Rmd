@@ -23,6 +23,7 @@ library("TreeBUGS")     # for estimating the hierachical Bayesian MPT model
 library("tidybayes")    # for extracting parameters from Bayesian model
 library("ggridges")     # for ridgeline plot
 library("MPTinR")       # for calculating MPT predictions
+library("afex")         # for mixed model analysis of Exp. 2
 library("tidyverse")    # everything else
 ```
 
@@ -272,6 +273,96 @@ df.exp2 %>%
   filter(answer == "correct") %>% 
   select(age_group, proportion) %>% 
   print_table()
+```
+
+### Mixed Model Accuracy Analysis
+
+To analyse accuracy as a function of age group, the actual outcome, and the counterfactual outcome, we first need to prepare a new data set.
+
+```{r}
+df2 <- df.exp2 %>% 
+  filter(collision == "collision") %>% 
+  mutate(age_group = factor(age_group)) %>% 
+  group_by(participant, age_group, outcome_actual, outcome_counterfactual) %>% 
+  summarise(correct = sum(answer == "correct"), 
+            n = n()) %>% 
+  mutate(prop = correct/n)
+```
+
+We then fit a series of models (or read the fitted model files). `mod0` is the maximal model, `mod3` is the final model.
+
+```{r}
+if (!file.exists("cache/mixed_exp2.rda")) {
+  mod0 <- mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
+                  (outcome_actual * outcome_counterfactual||participant), 
+                df2, family = "binomial", method = "LRT", weights = n,
+                expand_re = TRUE, 
+                control = glmerControl(optCtrl = list(maxfun = 1e5)))
+  mod1 <- mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
+                  (outcome_actual + outcome_counterfactual||participant), 
+                df2, family = "binomial", method = "LRT", weights = n,
+                expand_re = TRUE)
+  mod2 <- mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
+                  (outcome_actual||participant), 
+                df2, family = "binomial", method = "LRT", weights = n,
+                expand_re = TRUE)
+  mod3 <- mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
+                  (1|participant), 
+                df2, family = "binomial", method = "LRT", weights = n,
+                expand_re = TRUE)
+
+  save(mod0, mod1, mod2, mod3, file = "fits/mixed_exp2.rda", 
+       compress = "xz")
+} else {
+  load("cache/mixed_exp2.rda")
+} 
+```
+
+The full model shows a main effect of age group plus an interaction of age group with the counterfactual outcome, but also some convergence warnings (for the full model).
+```{r}
+mod0
+```
+
+We consequently remove the random slope for the interaction. This model shows the same pattern of results, but also convergence warnings:
+
+```{r}
+mod1
+```
+
+Inspection of the variance estimates shows that the one for the counterfactual outcome is smallest. 
+
+```{r}
+summary(mod1)$varcor
+```
+
+We remove this in the next step, but the model still shows convergence warnings:
+
+```{r}
+mod2
+```
+
+We consequently remove the last remaining random slope as well. This still shows some warning, but no more for the full model. The pattern of results remains the same.
+
+```{r}
+mod3
+```
+
+
+We can now investigate the interaction of age group and the counterfactual outcome. For this we use the final model.
+```{r, fig.width=5, fig.height=6}
+afex_plot(mod3, "age_group", "outcome_counterfactual", 
+          data_geom = geom_count)
+```
+
+This shows an age effect if the counterfactual outcome is different, but not if it is the same. This is also confirmed by follow-up tests. First for the final modeL
+
+```{r}
+pairs(emmeans::emmeans(mod3, by = "outcome_counterfactual", "age_group"))
+```
+
+And for the maximal model:
+```{r}
+pairs(emmeans::emmeans(mod0, by = "outcome_counterfactual", "age_group"))
 ```
 
 

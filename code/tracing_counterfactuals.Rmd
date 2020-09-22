@@ -349,7 +349,7 @@ mod3
 
 
 We can now investigate the interaction of age group and the counterfactual outcome. For this we use the final model.
-```{r, fig.width=5, fig.height=6}
+```{r, fig.width=8, fig.height=4}
 afex_plot(mod3, "age_group", "outcome_counterfactual", 
           data_geom = geom_count)
 ```
@@ -456,7 +456,9 @@ ggplot(data = as_tibble(ppps$ind.T1.p),
   xlab("ppp-value")
 ```
 
-We also can investigate peaks and 80% HDIs in tabular form:
+#### Group-Level Estimates
+
+We can investigate the group-level parameter estimates (peaks) and 80% HDIs in tabular form:
 
 ```{r}
 
@@ -475,18 +477,20 @@ pars = gather_draws(fit_bayes_all$runjags,
                      `factor_.*_age`[i], regex = TRUE) %>% 
   ungroup() %>% 
   mutate(age_group = factor(age_groups[i], level = age_groups),
-         estimate = pnorm(.value),
+         #estimate = pnorm(.value),
          parameter = factor(
            str_replace(str_replace(.variable, "factor_", ""), "_age", ""), 
            levels = c("s", "m_o", "m_t"), 
            labels = c("italic(s)", "italic(m[o])", "italic(m[t])"))) %>% 
   mutate(age_group2 = factor(age_group, levels = rev(levels(di$age))))
+pars <- left_join(pars, mus) %>% 
+    mutate(estimate = pnorm(.value + mean))
 
 pars %>% 
   group_by(parameter, age_group) %>% 
-  mode_hdci(estimate, .width = c(0.80))
-pars <- left_join(pars, mus) %>% 
-    mutate(estimate = pnorm(.value + mean))
+  mode_hdci(estimate, .width = c(0.80)) %>% 
+  mutate(.lower = round(.lower, 4))
+
 ```
 
 
@@ -927,7 +931,7 @@ pars = gather_draws(fit_bayes_all$runjags,
                      `factor_.*_age`[i], regex = TRUE) %>% 
   ungroup() %>% 
   mutate(age_group = factor(age_groups[i], level = age_groups),
-         estimate = pnorm(.value),
+         #estimate = pnorm(.value),
          parameter = factor(
            str_replace(str_replace(.variable, "factor_", ""), "_age", ""), 
            levels = c("s", "m_o", "m_t"), 

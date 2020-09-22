@@ -20,8 +20,6 @@ library("broom")        # for tidy model fits
 library("ggeffects")    # for marginal effects
 library("BayesFactor")  # for calculating Bayes factors
 library("TreeBUGS")     # for estimating the hierachical Bayesian MPT model
-                        # use development version 
-                        # devtools::install_github("denis-arnold/TreeBUGS")
 library("tidybayes")    # for extracting parameters from Bayesian model
 library("ggridges")     # for ridgeline plot
 library("MPTinR")       # for calculating MPT predictions

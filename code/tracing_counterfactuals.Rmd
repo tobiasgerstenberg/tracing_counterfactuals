@@ -1000,6 +1000,10 @@ ggplot(data = df.plot_singly_determined,
                              l = 0,
                              unit = "cm"))
 
+ggsave("../figures//experiment2__singlydetermined_bars.pdf",
+       width = 8,
+       height = 6)
+
 ```
 ```{r fig.height=6, fig.width=8}
 df.plot_over_determined = df.exp2 %>% 
@@ -1081,6 +1085,10 @@ ggplot(data = df.plot_over_determined,
                              b = 0,
                              l = 0,
                              unit = "cm"))
+
+ggsave("../figures//experiment2_overdetermined_bars.pdf",
+       width = 8,
+       height = 6)
 
 ```
 ### Group-level parameteres

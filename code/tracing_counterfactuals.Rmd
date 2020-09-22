@@ -365,6 +365,13 @@ And for the maximal model:
 pairs(emmeans::emmeans(mod0, by = "outcome_counterfactual", "age_group"))
 ```
 
+Do we see an effect of "wishful thinking" such that children in our study were more likely to be correct on trials for which the ball could have gone into the goal but did not (i.e., an actual outcome by counterfactual outcome interaction)? No.
+
+```{r}
+emmeans::emmeans(mod3, c("outcome_actual", "outcome_counterfactual"), 
+                 type = "response")
+```
+
 
 ### MPT analysis 
 

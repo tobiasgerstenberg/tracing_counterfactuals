@@ -943,7 +943,7 @@ ggplot(data = df.plot_singly_determined,
        mapping = aes(x = age_group,
                      y = proportion,
                      fill = answer)) + 
-  ggtitle("Responses to singly-determined items") +
+  ggtitle("Singly-determined items") +
   geom_bar(stat = "identity",
            position = position_fill(reverse = TRUE),
            color = "black") +
@@ -1029,7 +1029,7 @@ ggplot(data = df.plot_over_determined,
        mapping = aes(x = age_group,
                      y = proportion,
                      fill = answer)) + 
-  ggtitle("Responses to over-determined items") +
+  ggtitle("Over-determined items") +
   geom_bar(stat = "identity",
            position = position_fill(reverse = TRUE),
            color = "black") +
@@ -1091,6 +1091,7 @@ ggsave("../figures//experiment2_overdetermined_bars.pdf",
        height = 6)
 
 ```
+
 ### Group-level parameteres
 
 The following plot shows the posterior distribution of the group-level parameters, separated by age-group. 

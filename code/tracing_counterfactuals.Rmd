@@ -368,6 +368,18 @@ ggplot(data = as_tibble(ppps$ind.T1.p),
 We also can investigate peaks and 80% HDIs in tabular form:
 
 ```{r}
+
+mus <- gather_draws(fit_bayes_all$runjags, mu[i]) %>% 
+    mutate(
+      parameter = factor(
+        i, 
+        levels = c(3, 1, 2), 
+        labels = c("italic(s)", "italic(m[o])", "italic(m[t])"))
+    ) %>% 
+    rename(mean = .value) %>% 
+    ungroup() %>% 
+    select(-i, -.variable)
+
 pars = gather_draws(fit_bayes_all$runjags, 
                      `factor_.*_age`[i], regex = TRUE) %>% 
   ungroup() %>% 
@@ -381,7 +393,9 @@ pars = gather_draws(fit_bayes_all$runjags,
 
 pars %>% 
   group_by(parameter, age_group) %>% 
-  mode_hdcih(estimate, .width = c(0.80))
+  mode_hdci(estimate, .width = c(0.80))
+pars <- left_join(pars, mus) %>% 
+    mutate(estimate = pnorm(.value + mean))
 ```
 
 
@@ -413,7 +427,7 @@ tmp_diff = pars %>%
 
 tmp_diff %>% 
   group_by(inter) %>% 
-  mean_hdcih(estimate, .width = c(0.80, 0.95))
+  mean_hdci(estimate, .width = c(0.80, 0.95))
 ```
 
 We can also plot the difference distributions plus 80% and 95% credibility intervals. From this it is clear that there is not really any evidence for differences in $m_o$. However, there is some evidence for a difference in $m_t$. Furthermore, the monotonic increase for$s$ also receives some support.
@@ -421,7 +435,7 @@ We can also plot the difference distributions plus 80% and 95% credibility inter
 ```{r, fig.height=3, fig.width=5}
 tmp_diff %>%   
   ggplot(aes(y = diff, x = estimate)) +
-  geom_halfeyeh(.width = c(0.80, 0.95), point_interval = mode_hdcih) +
+  stat_halfeye(.width = c(0.80, 0.95), point_interval = mode_hdci) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   facet_wrap(~parameter, labeller = label_parsed) +
   xlab("Difference (Probability Scale)") +
@@ -441,11 +455,11 @@ sigmas = gather_draws(fit_bayes_all$runjags, sigma[par]) %>%
                              labels = c("s", "m_o", "m_t")))
 sigmas %>% 
   ggplot(aes(y = parameter, x = .value)) +
-  geom_halfeyeh(.width = c(0.80, 0.95), point_interval = mode_hdcih)
+  stat_halfeye(.width = c(0.80, 0.95), point_interval = mode_hdci)
 
 sigmas %>%
   group_by(parameter) %>%
-  mode_hdcih(.value, .width = c(0.80, 0.95))
+  mode_hdci(.value, .width = c(0.80, 0.95))
 ```
 
 
@@ -807,6 +821,17 @@ The following plot shows the posterior distribution of the group-level parameter
 
 ```{r, fig.height=8, fig.width=4}
 
+mus <- gather_draws(fit_bayes_all$runjags, mu[i]) %>% 
+    mutate(
+      parameter = factor(
+        i, 
+        levels = c(3, 1, 2), 
+        labels = c("italic(s)", "italic(m[o])", "italic(m[t])"))
+    ) %>% 
+    rename(mean = .value) %>% 
+    ungroup() %>% 
+    select(-i, -.variable)
+
 pars = gather_draws(fit_bayes_all$runjags, 
                      `factor_.*_age`[i], regex = TRUE) %>% 
   ungroup() %>% 
@@ -815,8 +840,10 @@ pars = gather_draws(fit_bayes_all$runjags,
          parameter = factor(
            str_replace(str_replace(.variable, "factor_", ""), "_age", ""), 
            levels = c("s", "m_o", "m_t"), 
-           labels = c("italic(s)", "italic(m[o])", "italic(m[t])")))
-
+           labels = c("italic(s)", "italic(m[o])", "italic(m[t])"))) %>% 
+  mutate(age_group2 = factor(age_group, levels = rev(levels(di$age))))
+pars <- left_join(pars, mus) %>% 
+    mutate(estimate = pnorm(.value + mean))
 ggplot(pars, aes(x = estimate,
                  y = age_group, 
                  # fill = ..x..,

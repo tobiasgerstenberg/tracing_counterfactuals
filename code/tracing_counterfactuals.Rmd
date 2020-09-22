@@ -354,7 +354,7 @@ afex_plot(mod3, "age_group", "outcome_counterfactual",
           data_geom = geom_count)
 ```
 
-This shows an age effect if the counterfactual outcome is different, but not if it is the same. This is also confirmed by follow-up tests. First for the final modeL
+This shows an age effect if the counterfactual outcome is the same (i.e., over-determined cases), but not if it is different (i.e., singly-determined cases). This is also confirmed by follow-up tests. First for the final modeL
 
 ```{r}
 pairs(emmeans::emmeans(mod3, by = "outcome_counterfactual", "age_group"))
@@ -918,6 +918,171 @@ ggsave("../figures//experiment2_bars.pdf",
        height = 6)
 ```
 
+Let's also look at these results split up by singly-determined and over-determined
+```{r fig.height=6, fig.width=8}
+df.plot_singly_determined = df.exp2 %>% 
+  mutate(answer = factor(answer,
+                         labels = c("correct",
+                                    "match origin",
+                                    "match trajectory",
+                                    "match neither")),
+         question_index = str_c(outcome_actual, "\n",
+                                outcome_counterfactual, "\n",
+                                collision),
+         question_index = as.factor(question_index)) %>% 
+  filter(collision == "collision") %>% 
+  filter(outcome_counterfactual=="different") %>%
+  count(age_group, answer) %>%
+  group_by(age_group) %>% 
+  mutate(proportion = n / sum(n),
+         label = str_c(round(proportion, 2) * 100, "%")) %>% 
+  ungroup()
+
+
+ggplot(data = df.plot_singly_determined, 
+       mapping = aes(x = age_group,
+                     y = proportion,
+                     fill = answer)) + 
+  ggtitle("Responses to singly-determined items") +
+  geom_bar(stat = "identity",
+           position = position_fill(reverse = TRUE),
+           color = "black") +
+  geom_hline(yintercept = 0.25,
+             linetype = 2,
+             size = 1,
+             color = "gray20") +
+  geom_text(mapping = aes(label = label),
+            color = "black",
+            # fontface = "bold",
+            size = 5,
+            position = position_stack(vjust = .5,
+                                      reverse = TRUE)) +
+  annotate(geom = "text",
+           x = df.text$x,
+           y = df.text$y,
+           label = df.text$label,
+           size = 8) + 
+  annotate(geom = "text",
+           x = rep(6.5, 4),
+           y = df.plot %>% 
+             filter(age_group == 6) %>% 
+             select(proportion) %>% 
+             mutate(cum_prop = cumsum(proportion),
+                    lag = lag(cum_prop, 1, default = 0),
+                    y = (cum_prop + lag) / 2) %>% 
+             pull(y),
+           label = c("correct",
+                     "match origin",
+                     "match trajectory",
+                     "match neither"),
+           hjust = 0,
+           size = 7) + 
+  labs(y = "% of responses") +
+  scale_y_continuous(breaks = seq(0, 1, 0.25),
+                     labels = str_c(seq(0, 100, 25), "%"),
+                     expand = expansion(mult = 0)) +
+  scale_x_continuous(breaks = 4:6,
+                     labels = str_c(4:6, " years"),
+                     expand = expansion(add = 0.1)) + 
+  coord_cartesian(clip = "off") + 
+  scale_fill_manual(values = c(rgb(252, 0, 8, maxColorValue = 255),
+                               rgb(254, 255, 13, maxColorValue = 255),
+                               rgb(135, 0, 197, maxColorValue = 255),
+                               rgb(53, 91, 183, maxColorValue = 255))) +
+  theme(text = element_text(size = 30),
+        legend.position = "none",
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        legend.title = element_blank(),
+        plot.margin = margin(t = 0.5,
+                             r = 5,
+                             b = 0,
+                             l = 0,
+                             unit = "cm"))
+
+```
+```{r fig.height=6, fig.width=8}
+df.plot_over_determined = df.exp2 %>% 
+  mutate(answer = factor(answer,
+                         labels = c("correct",
+                                    "match origin",
+                                    "match trajectory",
+                                    "match neither")),
+         question_index = str_c(outcome_actual, "\n",
+                                outcome_counterfactual, "\n",
+                                collision),
+         question_index = as.factor(question_index)) %>% 
+  filter(collision == "collision") %>% 
+  filter(outcome_counterfactual=="same") %>%
+  count(age_group, answer) %>%
+  group_by(age_group) %>% 
+  mutate(proportion = n / sum(n),
+         label = str_c(round(proportion, 2) * 100, "%")) %>% 
+  ungroup()
+
+
+ggplot(data = df.plot_over_determined, 
+       mapping = aes(x = age_group,
+                     y = proportion,
+                     fill = answer)) + 
+  ggtitle("Responses to over-determined items") +
+  geom_bar(stat = "identity",
+           position = position_fill(reverse = TRUE),
+           color = "black") +
+  geom_hline(yintercept = 0.25,
+             linetype = 2,
+             size = 1,
+             color = "gray20") +
+  geom_text(mapping = aes(label = label),
+            color = "black",
+            # fontface = "bold",
+            size = 5,
+            position = position_stack(vjust = .5,
+                                      reverse = TRUE)) +
+  annotate(geom = "text",
+           x = df.text$x,
+           y = df.text$y,
+           label = df.text$label,
+           size = 8) + 
+  annotate(geom = "text",
+           x = rep(6.5, 4),
+           y = df.plot %>% 
+             filter(age_group == 6) %>% 
+             select(proportion) %>% 
+             mutate(cum_prop = cumsum(proportion),
+                    lag = lag(cum_prop, 1, default = 0),
+                    y = (cum_prop + lag) / 2) %>% 
+             pull(y),
+           label = c("correct",
+                     "match origin",
+                     "match trajectory",
+                     "match neither"),
+           hjust = 0,
+           size = 7) + 
+  labs(y = "% of responses") +
+  scale_y_continuous(breaks = seq(0, 1, 0.25),
+                     labels = str_c(seq(0, 100, 25), "%"),
+                     expand = expansion(mult = 0)) +
+  scale_x_continuous(breaks = 4:6,
+                     labels = str_c(4:6, " years"),
+                     expand = expansion(add = 0.1)) + 
+  coord_cartesian(clip = "off") + 
+  scale_fill_manual(values = c(rgb(252, 0, 8, maxColorValue = 255),
+                               rgb(254, 255, 13, maxColorValue = 255),
+                               rgb(135, 0, 197, maxColorValue = 255),
+                               rgb(53, 91, 183, maxColorValue = 255))) +
+  theme(text = element_text(size = 30),
+        legend.position = "none",
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        legend.title = element_blank(),
+        plot.margin = margin(t = 0.5,
+                             r = 5,
+                             b = 0,
+                             l = 0,
+                             unit = "cm"))
+
+```
 ### Group-level parameteres
 
 The following plot shows the posterior distribution of the group-level parameters, separated by age-group. 

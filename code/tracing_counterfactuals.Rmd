@@ -11,7 +11,7 @@ output:
 
 # Load packages
 
-```{r, warning=F, message=F}
+```{r, warning=FALSE, message=FALSE}
 library("janitor")      # clean up column names
 library("knitr")        # for knitting stuff
 library("kableExtra")   # for markdown tables
@@ -19,12 +19,13 @@ library("xtable")       # for latex tables
 library("broom")        # for tidy model fits
 library("ggeffects")    # for marginal effects
 library("BayesFactor")  # for calculating Bayes factors
-library("TreeBUGS")     # for estimating the hierachical Bayesian MPT model
+library("TreeBUGS")     # for estimating the hierarchical Bayesian MPT model
 library("tidybayes")    # for extracting parameters from Bayesian model
-library("ggridges")     # for ridgeline plot
+library("ggridges")     # for ridge line plot
 library("MPTinR")       # for calculating MPT predictions
 library("afex")         # for mixed model analysis of Exp. 2
 library("tidyverse")    # everything else
+library("cowplot")      # for plot_grid()
 ```
 
 ```{r}
@@ -641,6 +642,56 @@ gather_draws(fit_bayes_all$runjags, mu[par], sigma[par]) %>%
 ```
 
 This plot provides little evidence for large parameter trade-offs. We see some mild positive correlation, $r = .135$, between $\mu$ and $\sigma$ for $m_o$. Furthermore, a negative correlation of $r = -.31$ between $\mu$ and $\sigma$ of $s$. Overall this suggests that parameter trade-offs cannot be mainly responsible for the disagreement between individual-level and group-level.
+
+#### Bayesian Power Analysis
+
+We performed a simulation study that can be seen as the Bayesian equivalent of a power analysis. The goal was to see what type of difference in the $s$ parameter could be reliably detected using the 80% and 95% credibility interval with the other parameter estimates fixed to values as obtained from our study. One problem with this analysis is that it was a retroactive analysis, that is, performed after obtaining the data and thus presupposes that our mean estimates of the other parameter are precise enough. As just described, with the exception being the $s$ parameter which was investigated in this simulation, all other parameters were fixed to values similar to the one obtained in our experiment. 
+
+In particular, we performed a simulation in which we simulated data from two groups that were in size identical to the groups in our study (i.e., same number of participants and same number of trials as in each of our age groups) and then refit the data with the same MPT model as in the main study (but for two groups only). In the simulation, we systematically varied the difference in the $s$ parameter from 0.1 to 0.9 (and mean $s = 0.5$) with all other parameters fixed to the same values. For each value we simulated 500 data sets. The full details of the simulation can be found in the `R` files `simulation.R` (which contains the code that runs all simulations) and `simfun.R` (which contains the function that performs one simulation and is called repeatedly in `simulation.R`). The results are shown in the following figure (description below).
+
+```{r, fig.height=5, fig.width=11}
+load("cache/sim_results.rda")
+sim_overview <- bind_rows(allfit) %>% 
+  group_by(sim_diff) %>% 
+  summarise(across(c(starts_with("ci"), obs_diff), 
+                   .fns = list(mean = mean, sd = sd, 
+                               lower = ~quantile(., probs = 0.1), 
+                               upper = ~quantile(., probs = 0.8)))) 
+
+p1 <- ggplot(sim_overview, aes(x = factor(sim_diff))) +
+  geom_abline(slope = 0.1, intercept = 0, color = "lightgrey") +
+  geom_hline(yintercept = 0.5, colour = "lightgrey") +
+  geom_line(aes(y = obs_diff_mean, group = 1)) +
+  geom_pointrange(aes(y = obs_diff_mean, 
+                      ymin = obs_diff_lower,
+                      ymax = obs_diff_upper)) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Simulated difference", 
+       y = "Observed difference (80% Quantile)")
+
+p2 <- ggplot(sim_overview, aes(x = factor(sim_diff))) +
+  scale_x_discrete() +
+  annotate("rect", xmin = 5.5, xmax = 7.5, ymin = 0, ymax = 1, alpha = 0.2) +
+  geom_line(aes(y = ci80_mean, colour = "80% CI", group = 1)) +
+  geom_point(aes(y = ci80_mean, colour = "80% CI")) +
+  geom_line(aes(y = ci95_mean, colour = "95% CI", group = 1)) +
+  geom_point(aes(y = ci95_mean, colour = "95% CI")) +
+  labs(x = "Simulated difference", 
+       y = "Proportion CIs excl. 0") +
+  coord_cartesian(ylim = c(0, 1)) + theme(
+    legend.position = c(.35, .95),
+    legend.justification = c("right", "top"),
+    legend.box.just = "right",
+    legend.margin = margin(6, 6, 6, 6), 
+    legend.title = element_blank()
+    )
+plot_grid(p1, p2)
+#ggsave("calibration.png")
+```
+
+One interesting result coming from the simulation is that we see quite a bit of hierarchical or prior-based shrinkage. This result is shown in the left panel. It shows on the x-axis the simulated (i.e., "true" in the simulation) difference between the two groups in the $s$ parameter and on the y-axis the observed difference between the two groups in the $s$ parameter (error bars show th 80% quantile intervals of the simulation). What is clear from the plot is that the observed difference is always smaller than the simulated difference (i.e., the difference is shrunk towards 0). This can be seen by comparing the observed difference against the main diagonal (in gray) showing the identity line; all observed data points are below the line. We have also added a horizontal line at 0.5, which is roughly the difference in the $s$ parameter we have actually observed. We can see that such an observed difference is most likely if the "true" (i.e., simulated) difference is somewhere between 0.6 and 0.7.
+
+The right panel shows the power of our Bayesian analysis. That is, how often a particular Bayesian credibility interval (80% or 95%) excludes 0 (this is the criterion we use in the paper). We have shaded the area that seems to correspond to our observed difference (i.e., a simulated difference of around 0.6 and 0.7). We can see that the power for the 80% interval in the region that seems to correspond to our observed difference is around 0.75.
 
 ### Latent Class Approach
 

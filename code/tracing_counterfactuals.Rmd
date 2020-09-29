@@ -290,7 +290,7 @@ df2 <- df.exp2 %>%
   mutate(prop = correct/n)
 ```
 
-We then fit a series of models (or read the fitted model files). `mod0` is the maximal model, `mod3` is the final model.
+We then fit a series of models (or read the fitted model files). `mod0` is the maximal model, `mod3` is the final model. To sum the analysis strategy up: Tests of fixed-effects were based on likelihood-ratio tests implemented in `afex`. We started this analysis using a model with the maximal random effect structure justified by the design (Barr et al., 2013). This model included by-participant random intercepts as well as by-participant random slopes for the actual and counterfactual outcome as well as their interaction. Because this model failed to converge, we reduced the random effect structure to a model with  by-participant random intercepts only. For all tested models, including the maximal and the final model, the pattern of significant and non-significant effects was identical.
 
 ```{r}
 if (!file.exists("cache/mixed_exp2.rda")) {
@@ -366,13 +366,13 @@ And for the maximal model:
 pairs(emmeans::emmeans(mod0, by = "outcome_counterfactual", "age_group"))
 ```
 
+
 Do we see an effect of "wishful thinking" such that children in our study were more likely to be correct on trials for which the ball could have gone into the goal but did not (i.e., an actual outcome by counterfactual outcome interaction)? No.
 
 ```{r}
 emmeans::emmeans(mod3, c("outcome_actual", "outcome_counterfactual"), 
                  type = "response")
 ```
-
 
 ### MPT analysis 
 

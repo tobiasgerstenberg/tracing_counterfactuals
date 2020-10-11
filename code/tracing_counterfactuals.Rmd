@@ -7,6 +7,9 @@ output:
     toc_depth: 4
     theme: cosmo
     highlight: tango
+  # pdf_document:
+  #   toc: true
+  #   toc_depth: 4
 ---
 
 # Load packages
@@ -24,8 +27,8 @@ library("tidybayes")    # for extracting parameters from Bayesian model
 library("ggridges")     # for ridge line plot
 library("MPTinR")       # for calculating MPT predictions
 library("afex")         # for mixed model analysis of Exp. 2
+library("patchwork")    # for making figure panels
 library("tidyverse")    # everything else
-library("cowplot")      # for plot_grid()
 ```
 
 ```{r}
@@ -34,6 +37,8 @@ theme_set(theme_classic() +
 
 opts_chunk$set(comment = "#>",
                fig.show = "hold")
+
+options(dplyr.summarise.inform = F)
 ```
 
 # Helper functions 
@@ -137,13 +142,18 @@ binom.test(x = df.exp1a %>%
 ## Plots
 
 ```{r fig.height=6, fig.width=10, warning=F}
+set.seed(1)
+
 df.plot = df.exp1a %>% 
   mutate(age_group = factor(age_group,
                             levels = c("5", "7", "9"),
-                            labels = c("5-6\nyears", "7-8\nyears","9-10\nyears")),
+                            labels = c("5-6\nyears",
+                                       "7-8\nyears",
+                                       "9-10\nyears")),
          condition = factor(condition,
                             levels = c("C", "D"),
-                            labels = c("makes difference", "overdetermined"))) %>% 
+                            labels = c("makes difference",
+                                       "overdetermined"))) %>% 
   filter(gng == 1)
 
 df.text = df.plot %>% 
@@ -182,7 +192,7 @@ ggplot(data = df.plot,
         axis.title.x = element_blank(),
         legend.title = element_blank())
 
-ggsave("../figures//experiment1a_bars.pdf",
+ggsave("../figures/experiment1a_bars.pdf",
        width = 10,
        height = 6)
 ```
@@ -281,7 +291,7 @@ df.exp2 %>%
 To analyse accuracy as a function of age group, the actual outcome, and the counterfactual outcome, we first need to prepare a new data set.
 
 ```{r}
-df2 <- df.exp2 %>% 
+df2 = df.exp2 %>% 
   filter(collision == "collision") %>% 
   mutate(age_group = factor(age_group)) %>% 
   group_by(participant, age_group, outcome_actual, outcome_counterfactual) %>% 
@@ -294,20 +304,20 @@ We then fit a series of models (or read the fitted model files). `mod0` is the m
 
 ```{r}
 if (!file.exists("cache/mixed_exp2.rda")) {
-  mod0 <- mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
+  mod0 = mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
                   (outcome_actual * outcome_counterfactual||participant), 
                 df2, family = "binomial", method = "LRT", weights = n,
                 expand_re = TRUE, 
                 control = glmerControl(optCtrl = list(maxfun = 1e5)))
-  mod1 <- mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
+  mod1 = mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
                   (outcome_actual + outcome_counterfactual||participant), 
                 df2, family = "binomial", method = "LRT", weights = n,
                 expand_re = TRUE)
-  mod2 <- mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
+  mod2 = mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
                   (outcome_actual||participant), 
                 df2, family = "binomial", method = "LRT", weights = n,
                 expand_re = TRUE)
-  mod3 <- mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
+  mod3 = mixed(prop ~ age_group*outcome_actual*outcome_counterfactual + 
                   (1|participant), 
                 df2, family = "binomial", method = "LRT", weights = n,
                 expand_re = TRUE)
@@ -399,14 +409,18 @@ dc = di %>%
 We then fit the full model. Specifically, we fit one model to the data of all age groups, but add `age_group` as a covariate to all three model parameters. This is somewhat time intensive so we save the results (or load the saved results if those exist).
 
 ```{r}
-
 if (!file.exists("cache/fit_latent-trait_all.rda")) {
-  fit_bayes_all = traitMPT("models/model.eqn", di, restrictions = list("g1=g2=0.5"), 
-                            covData = dc,
-                            predStructure = list("m_o m_t s ; age"), 
-                            predType = "f",
-                            n.iter = 320000, n.thin = 300, n.chains = 4,
-                            n.adapt = 100000, n.burnin = 20000)
+  fit_bayes_all = traitMPT("models/model.eqn",
+                           di,
+                           restrictions = list("g1=g2=0.5"), 
+                           covData = dc,
+                           predStructure = list("m_o m_t s ; age"), 
+                           predType = "f",
+                           n.iter = 320000,
+                           n.thin = 300,
+                           n.chains = 4,
+                           n.adapt = 100000,
+                           n.burnin = 20000)
   ppps = PPP(fit_bayes_all)
   save(fit_bayes_all, ppps, file = "fits/fit_latent-trait_all.rda", 
        compress = "xz")
@@ -423,25 +437,25 @@ summary(fit_bayes_all)
 
 We also check the trace plots for the (group-level) mean parameters:
 
-```{r, fig.width=5, fig.height=6}
+```{r, fig.width=8, fig.height=6}
 plot(fit_bayes_all, parameter = "mean")
 ```
 
 The group-level SD parameters (on probit scale):
 
-```{r, fig.width=5, fig.height=6}
+```{r, fig.width=8, fig.height=6}
 plot(fit_bayes_all, parameter = "sigma")
 ```
 
 The correlation parameters among the individual effects:
 
-```{r, fig.width=5, fig.height=6}
+```{r, fig.width=8, fig.height=6}
 plot(fit_bayes_all, parameter = "rho")
 ```
 
 And finally the parameters for the effect of age on the model parameter (as well as their SDs).
 
-```{r, fig.width=5, fig.height=6}
+```{r, fig.width=8, fig.height=6}
 plot(fit_bayes_all, parameter = "factor")
 ```
 
@@ -470,7 +484,7 @@ We can investigate the group-level parameter estimates (peaks) and 80% HDIs in t
 
 ```{r}
 
-mus <- gather_draws(fit_bayes_all$runjags, mu[i]) %>% 
+mus = gather_draws(fit_bayes_all$runjags, mu[i]) %>% 
     mutate(
       parameter = factor(
         i, 
@@ -491,7 +505,7 @@ pars = gather_draws(fit_bayes_all$runjags,
            levels = c("s", "m_o", "m_t"), 
            labels = c("italic(s)", "italic(m[o])", "italic(m[t])"))) %>% 
   mutate(age_group2 = factor(age_group, levels = rev(levels(di$age))))
-pars <- left_join(pars, mus) %>% 
+pars = left_join(pars, mus) %>% 
     mutate(estimate = pnorm(.value + mean))
 
 pars %>% 
@@ -508,8 +522,8 @@ To investigate the difference between age groups, we calculate the difference di
 ```{r, fig.height=3, fig.width=5}
 tmp_diff = pars %>% 
   mutate(parameter = factor(parameter, levels = 
-                         c("italic(s)", "italic(m[o])", "italic(m[t])"), 
-                       labels = c("s", "m_o", "m_t"))) %>% 
+                              c("italic(s)", "italic(m[o])", "italic(m[t])"), 
+                            labels = c("s", "m_o", "m_t"))) %>% 
   mutate(inter = parameter:age_group) %>% 
   compare_levels(estimate, by = inter) %>% 
   mutate(par1 = str_extract(as.character(inter), "[a-z_]+"),
@@ -519,14 +533,16 @@ tmp_diff = pars %>%
   droplevels %>% ungroup %>% 
   mutate(diff = str_remove_all(as.character(inter), "[a-z_:]+")) %>%
   mutate(inter = 
-           factor(inter, levels = c(
-             "m_o:6 - m_o:4", "m_o:6 - m_o:5", "m_o:5 - m_o:4",  
-             "m_t:6 - m_t:4", "m_t:6 - m_t:5", "m_t:5 - m_t:4", 
-             "s:6 - s:4", "s:6 - s:5", "s:5 - s:4"))) %>% 
+           factor(inter, 
+                  levels = c("m_o:6 - m_o:4", "m_o:6 - m_o:5", "m_o:5 - m_o:4",  
+                             "m_t:6 - m_t:4", "m_t:6 - m_t:5", "m_t:5 - m_t:4", 
+                             "s:6 - s:4", "s:6 - s:5", "s:5 - s:4"))) %>% 
   mutate(diff = 
            factor(diff, levels = c("6 - 4", "6 - 5", "5 - 4"))) %>%
   mutate(parameter = factor(par1, levels = c("s", "m_o", "m_t"), 
-           labels = c("italic(s)", "italic(m[o])", "italic(m[t])")))
+                            labels = c("italic(s)",
+                                       "italic(m[o])",
+                                       "italic(m[t])")))
 
 tmp_diff %>% 
   group_by(inter) %>% 
@@ -638,7 +654,8 @@ gather_draws(fit_bayes_all$runjags, mu[par], sigma[par]) %>%
   spread("inter", ".value") %>% 
   select(-.draw) %>% 
   GGally::ggpairs(progress = FALSE, 
-                  lower = list(continuous = GGally::wrap("points", alpha = 0.05)))
+                  lower = list(continuous = GGally::wrap("points",
+                                                         alpha = 0.05)))
 ```
 
 This plot provides little evidence for large parameter trade-offs. We see some mild positive correlation, $r = .135$, between $\mu$ and $\sigma$ for $m_o$. Furthermore, a negative correlation of $r = -.31$ between $\mu$ and $\sigma$ of $s$. Overall this suggests that parameter trade-offs cannot be mainly responsible for the disagreement between individual-level and group-level.
@@ -651,14 +668,14 @@ In particular, we performed a simulation in which we simulated data from two gro
 
 ```{r, fig.height=5, fig.width=11}
 load("cache/sim_results.rda")
-sim_overview <- bind_rows(allfit) %>% 
+sim_overview = bind_rows(allfit) %>% 
   group_by(sim_diff) %>% 
   summarise(across(c(starts_with("ci"), obs_diff), 
                    .fns = list(mean = mean, sd = sd, 
                                lower = ~quantile(., probs = 0.1), 
                                upper = ~quantile(., probs = 0.8)))) 
 
-p1 <- ggplot(sim_overview, aes(x = factor(sim_diff))) +
+p1 = ggplot(sim_overview, aes(x = factor(sim_diff))) +
   geom_abline(slope = 0.1, intercept = 0, color = "lightgrey") +
   geom_hline(yintercept = 0.5, colour = "lightgrey") +
   geom_line(aes(y = obs_diff_mean, group = 1)) +
@@ -669,7 +686,7 @@ p1 <- ggplot(sim_overview, aes(x = factor(sim_diff))) +
   labs(x = "Simulated difference", 
        y = "Observed difference (80% Quantile)")
 
-p2 <- ggplot(sim_overview, aes(x = factor(sim_diff))) +
+p2 = ggplot(sim_overview, aes(x = factor(sim_diff))) +
   scale_x_discrete() +
   annotate("rect", xmin = 5.5, xmax = 7.5, ymin = 0, ymax = 1, alpha = 0.2) +
   geom_line(aes(y = ci80_mean, colour = "80% CI", group = 1)) +
@@ -685,7 +702,7 @@ p2 <- ggplot(sim_overview, aes(x = factor(sim_diff))) +
     legend.margin = margin(6, 6, 6, 6), 
     legend.title = element_blank()
     )
-plot_grid(p1, p2)
+wrap_plots(p1, p2)
 #ggsave("calibration.png")
 ```
 
@@ -697,7 +714,7 @@ The right panel shows the power of our Bayesian analysis. That is, how often the
 
 To further explore the individual differences we estimated the MPT model using a latent-trait approach. This approach tries to distribute the observed individual participants into a number of prespecified classes. To identify the number of classes that are supported by the data, we can use both AIC and BIC. As shown below, both AIC and BIC suggest three classes (for AIC, the second best number of classes is 2, whereas for BIC it is 4).
 
-```{r, fig.width=3,fig.height=3}
+```{r, fig.width=6,fig.height=3}
 hmm_all = read_lines("models/hmm_all.txt")
 hmm_model_sel = tibble(classes = factor(1:7),
   AIC = as.numeric(str_extract(hmm_all[str_starts(hmm_all, pattern = "AIC:")],
@@ -1149,7 +1166,7 @@ The following plot shows the posterior distribution of the group-level parameter
 
 ```{r, fig.height=8, fig.width=4}
 
-mus <- gather_draws(fit_bayes_all$runjags, mu[i]) %>% 
+mus = gather_draws(fit_bayes_all$runjags, mu[i]) %>% 
     mutate(
       parameter = factor(
         i, 
@@ -1170,7 +1187,7 @@ pars = gather_draws(fit_bayes_all$runjags,
            levels = c("s", "m_o", "m_t"), 
            labels = c("italic(s)", "italic(m[o])", "italic(m[t])"))) %>% 
   mutate(age_group2 = factor(age_group, levels = rev(levels(di$age))))
-pars <- left_join(pars, mus) %>% 
+pars = left_join(pars, mus) %>% 
     mutate(estimate = pnorm(.value + mean))
 ggplot(pars, aes(x = estimate,
                  y = age_group, 
@@ -1279,14 +1296,15 @@ Here are the mode and mean of the estimate of *s*, and their 80% HDIs, based on 
 Mode (reported, for comparison w/Exp 2 4-year-olds):
 ```{r}
 samps %>% 
-  mode_hdcih(.value,
-             .width = c(0.80))
+  mode_hdci(.value,
+            .width = c(0.80))
 ```
+
 Mean:
 ```{r}
 samps %>% 
-  mean_hdcih(.value,
-             .width = c(0.80))
+  mean_hdci(.value,
+            .width = c(0.80))
 ```
 
 ## Plots

@@ -152,8 +152,8 @@ df.plot = df.exp1a %>%
                                        "9-10\nyears")),
          condition = factor(condition,
                             levels = c("C", "D"),
-                            labels = c("makes difference",
-                                       "overdetermined"))) %>% 
+                            labels = c("singly-determined",
+                                       "over-determined"))) %>% 
   filter(gng == 1)
 
 df.text = df.plot %>% 
